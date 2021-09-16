@@ -1,0 +1,27 @@
+{
+  "name": "kurento-rtcpeer-bower",
+  "homepage": "https://github.com/imaginegr8app/kurento-rtcpeer-bower",
+  "authors": [
+    "arunkumar.m <arunkumar.m@lge.com>"
+  ],
+  "description": "kurento rtcpeer wrapper customized",
+  "main": "js/kurento-utils-share.js",
+  "keywords": [
+    "kurento",
+    "rtcpeer",
+    "wrapper"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/imaginegr8app/kurento-utils-source.git"
+  }
+}
