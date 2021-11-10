@@ -11,8 +11,9 @@ var logger = typeof window === 'undefined' ? console : window.Logger || console;
 var MEDIA_CONSTRAINTS = {
         audio: true,
         video: {
-            width: 640,
-            framerate: 15
+            width: 720,
+            height: 1280,
+            framerate: 60
         }
     };
 var ua = typeof window !== 'undefined' && window.navigator ? window.navigator.userAgent : '';
@@ -137,6 +138,7 @@ function setIceCandidateAccordingWebBrowser(functionToExecute, pc) {
     }
 }
 function WebRtcPeer(mode, options, callback) {
+    logger.debug('WebRtcPeer mode :' + mode + '\n');
     if (!(this instanceof WebRtcPeer)) {
         return new WebRtcPeer(mode, options, callback);
     }
@@ -152,6 +154,8 @@ function WebRtcPeer(mode, options, callback) {
     var remoteVideo = options.remoteVideo;
     var videoStream = options.videoStream;
     var audioStream = options.audioStream;
+    var isScreenShareAudio = options.isScreenShareAudio;
+    var userAudioStream = options.userAudioStream;
     var mediaConstraints = options.mediaConstraints;
     var pc = options.peerConnection;
     var sendSource = options.sendSource || 'webcam';
@@ -455,16 +459,25 @@ function WebRtcPeer(mode, options, callback) {
             callback('The peer connection object is in "closed" state. This is most likely due to an invocation of the dispose method before accepting in the dialogue');
         }
         if (videoStream && localVideo) {
+            logger.debug('[debug] attach local videoStream ...');
             self.showLocalVideo();
         }
         if (videoStream) {
+            logger.debug('[debug] videoStream length: ', videoStream.getTracks().length);
             videoStream.getTracks().forEach(function (track) {
                 pc.addTrack(track, videoStream);
             });
         }
         if (audioStream) {
+            logger.debug('[debug] audioStream length: ', audioStream.getTracks().length);
             audioStream.getTracks().forEach(function (track) {
                 pc.addTrack(track, audioStream);
+            });
+        }
+        if (userAudioStream) {
+            logger.debug('[debug] userAudioStream length: ', userAudioStream.getTracks().length);
+            userAudioStream.getTracks().forEach(function (track) {
+                pc.addTrack(track, userAudioStream);
             });
         }
         callback();
@@ -490,11 +503,23 @@ function WebRtcPeer(mode, options, callback) {
             if (constraints === undefined) {
                 constraints = MEDIA_CONSTRAINTS;
             }
-            console.log('[getScreenDisplay][calling getDisplayMedia api]..');
-            navigator.mediaDevices.getDisplayMedia(constraints).then(function (stream) {
-                videoStream = stream;
-                start();
-            }).catch(callback);
+            logger.debug('[debug] AdapterJS', typeof AdapterJS);
+            if (typeof AdapterJS !== 'undefined' && AdapterJS.webrtcDetectedBrowser === 'IE' && AdapterJS.webrtcDetectedVersion >= 9) {
+                logger.debug('[debug][TODO][getScreenDisplay][undefined AdapterJS or IE webrtcDetectedVersion >= 9]..');
+            } else {
+                logger.debug('[debug][getScreenDisplay][calling getDisplayMedia api]..');
+                if (isScreenShareAudio) {
+                    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+                        logger.debug('[debug][getScreenDisplay][got user audio stream]..');
+                        userAudioStream = stream;
+                    }).catch(callback);
+                }
+                navigator.mediaDevices.getDisplayMedia(constraints).then(function (stream) {
+                    videoStream = stream;
+                    logger.debug('[debug][getScreenDisplay][got user video stream]..');
+                    start();
+                }).catch(callback);
+            }
         }
         if (sendSource === 'webcam') {
             getMedia(mediaConstraints);
@@ -502,6 +527,7 @@ function WebRtcPeer(mode, options, callback) {
             getScreenDisplay(mediaConstraints);
         }
     } else {
+        logger.debug('[debug][directly start streaming] got audio and video params.');
         setTimeout(start, 0);
     }
     this.on('_dispose', function () {
